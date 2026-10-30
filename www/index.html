@@ -2,10 +2,14 @@
 <html lang="tr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#4cd3f5">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Boya &amp; Eğlen</title>
 <style>
-html,body{margin:0;height:100%;background:#4cd3f5;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;font-family:'Baloo 2','Nunito','Comic Sans MS',system-ui,sans-serif}
+html,body{margin:0;width:100%;height:100%;overscroll-behavior:none;background:#4cd3f5;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;font-family:'Baloo 2','Nunito','Comic Sans MS',system-ui,sans-serif}
 #st{position:absolute;left:0;top:0;width:1024px;height:572px;transform-origin:0 0;background:#4cd3f5;overflow:hidden}
 .a{position:absolute}
 .pr{transition:transform .18s cubic-bezier(.3,1.8,.5,1);cursor:pointer}
@@ -79,6 +83,7 @@ html,body{margin:0;height:100%;background:#4cd3f5;overflow:hidden;touch-action:n
 #pcard p{margin:0 0 11px;font-size:16px;line-height:1.45}
 #pcard .cp{margin-top:14px;padding-top:10px;border-top:2px solid #e3eef8;font-size:14px;color:#6b7c90;text-align:center}
 #priv-x{position:absolute;right:16px;top:10px;font-size:30px;cursor:pointer;color:#999;font-weight:900}
+#prev.hid{visibility:hidden}
 </style>
 </head>
 <body>
@@ -86,6 +91,7 @@ html,body{margin:0;height:100%;background:#4cd3f5;overflow:hidden;touch-action:n
   <div class="btn or pr" id="home-b" style="left:22px;top:12px"><svg viewBox="0 0 48 48"><path d="M5 24L24 7l19 17" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M11 23v17h9V30h8v10h9V23L24 12z" fill="#fff"/><circle cx="21" cy="26" r="1.6" fill="#f26d17" opacity="0"/></svg></div>
   <div class="btn or pr" id="reset" style="left:125px;top:12px"><svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"><path d="M38 25a14 14 0 1 1-4.5-10.5"/><path d="M37 6v9H28"/></svg></div>
   <div class="lb" style="left:124px;top:96px;width:84px">Sıfırla</div>
+  <div class="btn or pr hid" id="prev" style="left:238px;top:21px;width:64px;height:64px;border-radius:22px"><svg viewBox="0 0 48 48" style="width:34px;height:34px"><path d="M32 9L13 24l19 15z" fill="#fff" stroke="#fff" stroke-width="5" stroke-linejoin="round"/></svg></div>
   <div id="pill" class="a">1/100 <i>★</i></div>
   <div id="mus" class="a pr"><svg viewBox="0 0 48 48"><path d="M18 36V13l18-4v23" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="13" cy="36" r="6.5" fill="#fff"/><circle cx="31" cy="32" r="6.5" fill="#fff"/><path class="sl" d="M6 6l36 36" stroke="#555" stroke-width="5" stroke-linecap="round"/></svg></div>
   <div class="btn gr pr" id="done" style="left:910px;top:12px"><svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 26l10 10 19-22"/></svg></div>
@@ -123,10 +129,11 @@ document.addEventListener('contextmenu',e=>e.preventDefault());
 
 /* ---------- Ses (Web Audio) ---------- */
 let ac,mOn=true,ni=0;
-const A=()=>{if(!ac)ac=new(window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume();return ac};
-function tone(f,t,d,ty='triangle',g=.15){const c=A(),o=c.createOscillator(),v=c.createGain();o.type=ty;o.frequency.value=f;o.connect(v);v.connect(c.destination);const s=c.currentTime+t;v.gain.setValueAtTime(g,s);v.gain.exponentialRampToValueAtTime(.001,s+d);o.start(s);o.stop(s+d+.02)}
+let bgPaused=false,hadAudio=false;
+const A=()=>{if(!ac)ac=new(window.AudioContext||window.webkitAudioContext)();hadAudio=true;if(ac.state==='suspended'&&!bgPaused)ac.resume();return ac};
+function tone(f,t,d,ty='triangle',g=.15){if(bgPaused)return;const c=A(),o=c.createOscillator(),v=c.createGain();o.type=ty;o.frequency.value=f;o.connect(v);v.connect(c.destination);const s=c.currentTime+t;v.gain.setValueAtTime(g,s);v.gain.exponentialRampToValueAtTime(.001,s+d);o.start(s);o.stop(s+d+.02)}
 const mel=[523,659,784,659,587,698,880,698,523,659,784,1047,784,659,587,392];
-setInterval(()=>{if(mOn&&ac)tone(mel[ni++%mel.length],0,.4,'sine',.06)},420);
+setInterval(()=>{if(mOn&&ac&&!bgPaused)tone(mel[ni++%mel.length],0,.4,'sine',.06)},420);
 const victory=()=>{[523,659,784,1047,784,1047,1319,1568].forEach((f,i)=>{tone(f,i*.13,.35,'square',.08);tone(f/2,i*.13,.35,'triangle',.1)});tone(1047,1.1,.8,'triangle',.12);tone(1319,1.1,.8,'triangle',.1)};
 const hello=()=>[523,659,784,1047,1319].forEach((f,i)=>tone(f,i*.08,.3,'triangle',.14));
 const oops=()=>{tone(520,0,.12,'square',.07);tone(390,.13,.12,'square',.07);tone(300,.26,.28,'sawtooth',.06)};
@@ -247,13 +254,17 @@ ac2.addEventListener('pointermove',e=>{if(drawing)seg(pos(e))});
 /* ===== KİLİT / ÖDEME ALTYAPISI ===== */
 const FREE_LEVELS=20; /* ücretsiz bölüm sayısı; 21-100 kilitli */
 const isPrem=()=>{try{return localStorage.getItem('hasUnlockedFullGame')==='true'}catch(e){return false}};
-let lvl=1;
+let lvl=1,savedPaint={};
 function go(n){
+  if(hasUserPainted&&!noArt&&!locked)savedPaint[lvl]=pc.toDataURL();else delete savedPaint[lvl];
   lvl=Math.max(1,Math.min(100,n));try{localStorage.setItem('currentLevel',lvl)}catch(e){}$('#pill').innerHTML=lvl+'/100 <i>★</i>';
   locked=lvl>FREE_LEVELS&&!isPrem();$('#lk').style.display=locked?'flex':'none';
   hasUserPainted=false;clearPaint();noArt=!DRAWING_LIBRARY[lvl-1];$('#soon').style.display=(noArt&&!locked)?'flex':'none';drawArt(lvl);
+  const sv=savedPaint[lvl];if(sv&&!noArt&&!locked){const im=new Image();im.onload=()=>p.drawImage(im,0,0);im.src=sv;hasUserPainted=true}
+  $('#prev').classList.toggle('hid',lvl<=1);
   if(locked)openGate();
 }
+$('#prev').onclick=()=>{A();if(busy||lvl<=1)return;go(lvl-1)};
 $('#reset').onclick=()=>{A();if(!locked&&!noArt){clearPaint();hasUserPainted=false}};
 $('#lk').onclick=()=>{A();openGate()};
 const gate=$('#gate'),kn=$('#kn'),trk=$('#trk'),buy=$('#buy'),MAX=320-62;
@@ -304,11 +315,16 @@ $('#done').onclick=()=>{
   if(lvl>=100){setTimeout(showFinal,1100);return}
   setTimeout(()=>{busy=false;go(lvl+1)},2800);
 };
-/* TEST MODU: sayfa her yenilendiğinde 20. bölümden başlar (normal kullanımda 1 yapın) */
-const START_LEVEL=20;
-/* TEST: ilk açılışta eski test kilit kaydını bir kez temizler (yayından önce bu satırı silin) */
-try{if(!localStorage.getItem('test_reset_v3')){localStorage.removeItem('hasUnlockedFullGame');localStorage.setItem('test_reset_v3','1')}}catch(e){}
-try{localStorage.setItem('currentLevel',START_LEVEL)}catch(e){}
+/* Başlangıç: yeni/sıfırlanmış cihazda 1. bölüm; aksi halde en son kalınan bölüm */
+const START_LEVEL=1;
+function savedLevel(){
+  let n=START_LEVEL;
+  try{n=parseInt(localStorage.getItem('currentLevel'),10)}catch(e){}
+  if(!(n>=1))n=START_LEVEL;
+  n=Math.min(100,n);
+  if(n>FREE_LEVELS&&!isPrem())n=FREE_LEVELS; /* kilit açılmamışsa ücretsiz sınırda kal */
+  return n;
+}
 let finTimer=0;
 function showFinal(){
   $('#fin').style.display='flex';
@@ -316,8 +332,26 @@ function showFinal(){
   tone(784,1.1,.9,'triangle',.12);tone(1047,1.1,.9,'triangle',.1);tone(1319,1.1,.9,'triangle',.1);
   clearInterval(finTimer);finTimer=setInterval(()=>{confetti();tone(1047,0,.15,'triangle',.08);tone(1319,.12,.2,'triangle',.08)},3000);
 }
-$('#again').onclick=()=>{A();clearInterval(finTimer);$('#fin').style.display='none';busy=false;hello();go(1)};
-go(START_LEVEL);
+$('#again').onclick=()=>{A();clearInterval(finTimer);$('#fin').style.display='none';busy=false;hello();savedPaint={};go(1)};
+/* Ekran kilitlenince / uygulama arka plana alınınca tüm sesleri hemen durdur */
+function pauseAudio(){bgPaused=true;if(ac){try{ac.close()}catch(e){}ac=null}}
+function resumeAudio(){bgPaused=false;if(hadAudio&&!ac){try{A()}catch(e){}}}
+document.addEventListener('visibilitychange',()=>{document.hidden?pauseAudio():resumeAudio()});
+addEventListener('blur',pauseAudio);
+addEventListener('focus',()=>{if(!document.hidden)resumeAudio()});
+addEventListener('pagehide',pauseAudio);
+addEventListener('pageshow',()=>{if(!document.hidden)resumeAudio()});
+/* Tam ekran: ilk (ve çıkış sonrası her) dokunuşta durum/saat/pil çubuğunu gizler */
+function goFull(){
+  try{const d=document.documentElement;
+    if(document.fullscreenElement||document.webkitFullscreenElement)return;
+    const r=d.requestFullscreen||d.webkitRequestFullscreen;
+    if(r){const pr=r.call(d,{navigationUI:'hide'});if(pr&&pr.catch)pr.catch(()=>{})}
+  }catch(e){}
+}
+document.addEventListener('pointerdown',goFull,true);
+document.addEventListener('fullscreenchange',fit);
+go(savedLevel());
 /* Gizlilik penceresi */
 const openPriv=()=>{A();$('#priv').style.display='flex'};
 $('#priv-b').onclick=openPriv;$('#priv-g').onclick=openPriv;
