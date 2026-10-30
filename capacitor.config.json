@@ -1,0 +1,8 @@
+{
+  "appId": "com.pandagames.boyaeglen",
+  "appName": "Boya ve Eglen",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}
