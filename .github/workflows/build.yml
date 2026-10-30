@@ -2,15 +2,14 @@ name: Build Android APK
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Kodu cek
+      - name: Kodu indir
         uses: actions/checkout@v4
 
       - name: Node kur
@@ -21,7 +20,7 @@ jobs:
       - name: Java 17 kur
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: 17
 
       - name: Paketleri kur
@@ -31,16 +30,118 @@ jobs:
         run: npx cap add android
 
       - name: Yatay ekran ayari
-        run: |
-          sed -i 's/<activity/<activity android:screenOrientation="landscape"/' android/app/src/main/AndroidManifest.xml
+        run: sed -i 's/<activity/<activity android:screenOrientation="sensorLandscape"/' android/app/src/main/AndroidManifest.xml
 
-      - name: Tam Ekran Modu (Immersive Sticky)
+      - name: Tema tam ekran ayari
         run: |
-          FILE="android/app/src/main/java/com/pandagames/coloring/MainActivity.java"
-          if [ ! -f "$FILE" ]; then
-            FILE=$(find android/app/src/main/java -name "MainActivity.java")
-          fi
-          sed -i '/super.onCreate(savedInstanceState);/a \        getWindow().getDecorView().setSystemUiVisibility(android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY | android.view.View.SYSTEM_UI_FLAG_FULLSCREEN | android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE | android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION | android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);' "$FILE"
+          sed -i '/<style name="AppTheme.NoActionBar"/a\        <item name="android:windowFullscreen">true</item>' android/app/src/main/res/values/styles.xml
+          cat android/app/src/main/res/values/styles.xml
+
+      - name: Tam ekran (Immersive Sticky) ve arka plan sesi - MainActivity
+        run: |
+          cat > android/app/src/main/java/com/pandagames/boyaeglen/MainActivity.java <<'JAVAEOF'
+          package com.pandagames.boyaeglen;
+
+          import android.os.Build;
+          import android.os.Bundle;
+          import android.os.Handler;
+          import android.os.Looper;
+          import android.view.View;
+          import android.view.Window;
+          import android.view.WindowManager;
+          import android.webkit.WebView;
+
+          import androidx.core.view.WindowCompat;
+          import androidx.core.view.WindowInsetsCompat;
+          import androidx.core.view.WindowInsetsControllerCompat;
+
+          import com.getcapacitor.BridgeActivity;
+
+          public class MainActivity extends BridgeActivity {
+
+            private final Handler handler = new Handler(Looper.getMainLooper());
+
+            @Override
+            public void onCreate(Bundle savedInstanceState) {
+              super.onCreate(savedInstanceState);
+              getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+              if (Build.VERSION.SDK_INT >= 28) {
+                WindowManager.LayoutParams lp = getWindow().getAttributes();
+                lp.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+                getWindow().setAttributes(lp);
+              }
+              final View decor = getWindow().getDecorView();
+              decor.setOnSystemUiVisibilityChangeListener(new View.OnSystemUiVisibilityChangeListener() {
+                @Override
+                public void onSystemUiVisibilityChange(int visibility) {
+                  if ((visibility & View.SYSTEM_UI_FLAG_FULLSCREEN) == 0) {
+                    handler.postDelayed(new Runnable() {
+                      @Override public void run() { hideSystemBars(); }
+                    }, 600);
+                  }
+                }
+              });
+              hideSystemBars();
+            }
+
+            @Override
+            public void onWindowFocusChanged(boolean hasFocus) {
+              super.onWindowFocusChanged(hasFocus);
+              if (hasFocus) {
+                hideSystemBars();
+                handler.postDelayed(new Runnable() {
+                  @Override public void run() { hideSystemBars(); }
+                }, 300);
+              }
+            }
+
+            @Override
+            public void onPause() {
+              super.onPause();
+              WebView w = webView();
+              if (w != null) {
+                w.onPause();
+                w.pauseTimers();
+              }
+            }
+
+            @Override
+            public void onResume() {
+              super.onResume();
+              WebView w = webView();
+              if (w != null) {
+                w.onResume();
+                w.resumeTimers();
+              }
+              hideSystemBars();
+            }
+
+            private WebView webView() {
+              return (getBridge() != null) ? getBridge().getWebView() : null;
+            }
+
+            /** Immersive sticky: ust bilgi cubugu, bildirimler ve alt gezinme tuslari gizlenir. */
+            @SuppressWarnings("deprecation")
+            private void hideSystemBars() {
+              Window w = getWindow();
+              View decor = w.getDecorView();
+              WindowCompat.setDecorFitsSystemWindows(w, false);
+              decor.setSystemUiVisibility(
+                  View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                  | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                  | View.SYSTEM_UI_FLAG_FULLSCREEN
+                  | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                  | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                  | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
+              WindowInsetsControllerCompat c = WindowCompat.getInsetsController(w, decor);
+              if (c != null) {
+                c.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+                c.hide(WindowInsetsCompat.Type.systemBars());
+              }
+            }
+          }
+          JAVAEOF
+          grep -n "hideSystemBars" android/app/src/main/java/com/pandagames/boyaeglen/MainActivity.java | head -3
 
       - name: Oyunu Android'e kopyala
         run: npx cap sync android
@@ -54,5 +155,5 @@ jobs:
       - name: APK dosyasini yukle
         uses: actions/upload-artifact@v4
         with:
-          name: panda-boyama-apk
+          name: boya-eglen-test-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
