@@ -2,14 +2,15 @@ name: Build Android APK
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Kodu indir
+      - name: Kodu cek
         uses: actions/checkout@v4
 
       - name: Node kur
@@ -20,7 +21,7 @@ jobs:
       - name: Java 17 kur
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
+          distribution: 'temurin'
           java-version: 17
 
       - name: Paketleri kur
@@ -29,11 +30,9 @@ jobs:
       - name: Android projesini olustur
         run: npx cap add android
 
-      - name: Yatay ekran ayari
-        run: sed -i 's/<activity/<activity android:screenOrientation="sensorLandscape"/' android/app/src/main/AndroidManifest.xml
-
-      - name: Tam ekran ve arka plan sesi ayari
-        run: cp native/MainActivity.java android/app/src/main/java/com/pandagames/boyaeglen/MainActivity.java
+      - name: Yatay ekran ve Tam Ekran ayari
+        run: |
+          sed -i 's/<activity/<activity android:screenOrientation="landscape" android:theme="@android:style\/Theme.NoTitleBar.Fullscreen"/' android/app/src/main/AndroidManifest.xml
 
       - name: Oyunu Android'e kopyala
         run: npx cap sync android
@@ -47,5 +46,5 @@ jobs:
       - name: APK dosyasini yukle
         uses: actions/upload-artifact@v4
         with:
-          name: boya-eglen-test-apk
+          name: panda-boyama-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
