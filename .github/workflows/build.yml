@@ -32,6 +32,9 @@ jobs:
       - name: Yatay ekran ayari
         run: sed -i 's/<activity/<activity android:screenOrientation="sensorLandscape"/' android/app/src/main/AndroidManifest.xml
 
+      - name: Tam ekran ve arka plan sesi ayari
+        run: cp native/MainActivity.java android/app/src/main/java/com/pandagames/boyaeglen/MainActivity.java
+
       - name: Oyunu Android'e kopyala
         run: npx cap sync android
 
